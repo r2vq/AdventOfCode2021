@@ -8,16 +8,24 @@ fun main(args: Array<String>) {
     println("Program arguments: ${args.joinToString()}")
 
     val input = Scanner(System.`in`)
-    var isFirst = true
+
     var count = 0
-    var previous = 0
+    var first: Int? = null
+    var second: Int? = null
+    var third: Int? = null
     while (input.hasNext()) {
         val current = input.nextInt()
-        if (!isFirst && current > previous) {
-            count += 1
+        when {
+            first == null -> first = current
+            second == null -> second = current
+            third == null -> third = current
+            else -> {
+                if (current > first) count += 1
+                first = second
+                second = third
+                third = current
+            }
         }
-        isFirst = false
-        previous = current
     }
     println(count)
 }
