@@ -8,6 +8,8 @@ fun main() {
 
     var winner: Board? = null
     var winningCall: Int? = null
+    var lastWinner: Board? = null
+    var lastWinningCall: Int? = null
 
     calls.forEach { call ->
         boards.forEach { board ->
@@ -16,6 +18,8 @@ fun main() {
                     winner = board
                     winningCall = call
                 }
+                lastWinner = board
+                lastWinningCall = call
             }
         }
     }
@@ -24,6 +28,11 @@ fun main() {
     println("Call: $winningCall")
     println("Unmarked Sum: ${winner?.unmarked()}")
     println("Score: ${(winner?.unmarked() ?: 0) * (winningCall ?: 0)}")
+
+    println("Last Winner:\n${lastWinner}")
+    println("Call: $lastWinningCall")
+    println("Unmarked Sum: ${lastWinner?.unmarked()}")
+    println("Score: ${(lastWinner?.unmarked() ?: 0) * (lastWinningCall ?: 0)}")
 
     println("Boards: ${boards.size}")
 }
