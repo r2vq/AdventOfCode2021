@@ -1,45 +1,138 @@
 import java.util.*
 
-fun main(args: Array<String>) {
+fun main() {
     val input = Scanner(System.`in`)
-    val items = mutableListOf<String>().apply {
-        while (input.hasNext()) {
-            add(input.next())
-        }
-    }.toList()
-    var filtered = items
-    for (i in 0 until 12) {
-        filtered = filtered.filterMostCommonBit(i)
-        if (filtered.size == 1) {
-            println("breaking at $i")
-            break
-        } else {
-            println("size: ${filtered.size}")
+    val calls = input.next().split(",").map { it.toInt() }
+    val boards = makeBoards(input)
+    input.close()
+
+    var winner: Board? = null
+    var winningCall: Int? = null
+
+    calls.forEach { call ->
+        boards.forEach { board ->
+            if (board.call(call)) {
+                if (winner == null) {
+                    winner = board
+                    winningCall = call
+                }
+            }
         }
     }
-    println("${filtered.size}, ${filtered.first()}")
-    println("011101110101".toInt(2) * "100100010010".toInt(2))
+
+    println("Winner:\n${winner}")
+    println("Call: $winningCall")
+    println("Unmarked Sum: ${winner?.unmarked()}")
+    println("Score: ${(winner?.unmarked() ?: 0) * (winningCall ?: 0)}")
+
+    println("Boards: ${boards.size}")
 }
 
-fun List<String>.filterMostCommonBit(position: Int): List<String> {
-    var total = 0
-    var count = 0
-    forEach { word ->
-        total += if (word[position] == '1') 1 else 0
+fun makeBoards(input: Scanner): MutableList<Board> {
+    val boards: MutableList<Board> = mutableListOf()
+    while (input.hasNext()) {
+        (boards.lastOrNull()?.takeIf { it.hasSpace() } ?: Board().also { boards.add(it) })
+            .run { add(input.nextInt()) }
+    }
+    return boards
+}
+
+class Board {
+    private var count = 0
+    private var currentRow = 0
+    private var currentCol = 0
+    private var _hasSpace = true
+    private var alreadyWon = false
+    private val rows = listOf<MutableList<Cell>>(
+        mutableListOf(),
+        mutableListOf(),
+        mutableListOf(),
+        mutableListOf(),
+        mutableListOf(),
+    )
+    private val cols = listOf<MutableList<Cell>>(
+        mutableListOf(),
+        mutableListOf(),
+        mutableListOf(),
+        mutableListOf(),
+        mutableListOf(),
+    )
+    private val grid = mutableMapOf<Int, Cell>()
+
+    override fun toString(): String = buildString {
+        var longestCell = 0
+        rows.forEach { row ->
+            row.forEach { cell ->
+                val length = cell.value.toString().length + if (cell.isSelected) 1 else 0
+                if (length > longestCell) {
+                    longestCell = length
+                }
+            }
+        }
+        val rowString = rows.joinToString(separator = "\n") { row ->
+            row.joinToString(separator = " ") { cell ->
+                var output = ("*".takeIf { cell.isSelected } ?: "") + cell.value.toString()
+                while (output.length < longestCell) output = " $output"
+                output
+            }
+        }
+        append(listOf("B", "I", "N", "G", "O").joinToString(separator = " ") {
+            var output = it
+            var isFront = false
+            while (output.length < longestCell) output =
+                if (isFront.also { isFront = !isFront }) " $output" else "$output "
+            output
+        })
+        append("\n")
+        append(rowString)
+    }
+
+    // not 27401
+    // not 45792
+
+    fun hasSpace(): Boolean = _hasSpace
+
+    fun add(value: Int) {
+        val cell = Cell(value, false, currentRow, currentCol)
+
+        rows[currentRow].add(cell)
+        cols[currentCol].add(cell)
+        grid[value] = cell
+
+        currentCol += 1
+        if (currentCol >= 5) {
+            currentCol = 0
+            currentRow += 1
+
+            if (currentRow >= 5) {
+                currentRow = 0
+                _hasSpace = false
+            }
+        }
+
         count += 1
     }
-    val mostCommon = if (total * 2 < count) '1' else '0'
-    println("$mostCommon :: $total :: $count")
-    return filter {
-        it[position] == mostCommon
-    }
+
+    fun unmarked() = grid
+        .values
+        .fold(0) { acc, curr -> acc + (curr.value.takeUnless { curr.isSelected } ?: 0) }
+
+    fun call(value: Int): Boolean = grid[value]?.let { cell ->
+        if (alreadyWon) {
+            return false
+        }
+        cell.isSelected = true
+        val rowBingo = rows[cell.row].fold(true) { acc, curr -> acc && curr.isSelected }
+        val colBingo = cols[cell.col].fold(true) { acc, curr -> acc && curr.isSelected }
+        val isWin = rowBingo || colBingo
+        alreadyWon = isWin
+        isWin
+    } ?: false
 }
 
-// oxygen  011101110101
-// gamma   010001110111
-// co2     100100010010
-// epsilon 100101011001
-
-fun Char.toBinary(): Int = if (this == '1') 1 else 0
-fun Int.toGamma(half: Int): String = if (this >= half) "1" else "0"
-fun Int.toEpsilon(half: Int): String = if (this <= half) "1" else "0"
+data class Cell(
+    val value: Int,
+    var isSelected: Boolean = false,
+    val row: Int,
+    val col: Int,
+)
