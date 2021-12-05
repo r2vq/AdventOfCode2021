@@ -14,8 +14,8 @@ fun main() {
             add(Pipe(startX, startY, endX, endY))
         }
     }
-        .filter { pipe -> pipe.startX == pipe.endX || pipe.startY == pipe.endY }
         .onEach { pipe ->
+            println(pipe)
             if (pipe.startX > maxX) maxX = pipe.startX
             if (pipe.startY > maxY) maxY = pipe.startY
             if (pipe.endX > maxX) maxX = pipe.endX
@@ -46,6 +46,41 @@ fun main() {
             // horizontal
             for (x in startX..endX) {
                 grid[coordinate.startY][x] += 1
+            }
+        } else {
+            // diagonal
+            val isLTR = coordinate.startX < coordinate.endX
+            val isUTD = coordinate.startY < coordinate.endY
+            var currentX = coordinate.startX
+            var currentY = coordinate.startY
+            if (isLTR) {
+                if (isUTD) {
+                    while (currentX <= coordinate.endX && currentY <= coordinate.endY) {
+                        grid[currentY][currentX] += 1
+                        currentX += 1
+                        currentY += 1
+                    }
+                } else {
+                    while (currentX <= coordinate.endX && currentY >= coordinate.endY) {
+                        grid[currentY][currentX] += 1
+                        currentX += 1
+                        currentY -= 1
+                    }
+                }
+            } else {
+                if (isUTD) {
+                    while (currentX >= coordinate.endX && currentY <= coordinate.endY) {
+                        grid[currentY][currentX] += 1
+                        currentX -= 1
+                        currentY += 1
+                    }
+                } else {
+                    while (currentX >= coordinate.endX && currentY >= coordinate.endY) {
+                        grid[currentY][currentX] += 1
+                        currentX -= 1
+                        currentY -= 1
+                    }
+                }
             }
         }
     }
