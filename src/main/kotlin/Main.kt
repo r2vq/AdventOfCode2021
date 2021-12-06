@@ -6,7 +6,7 @@ fun main() {
     println("Initial state: ${fishes.joinToString(",") { it.toString() }}")
     val school = fishes.toSchool()
     println("Initial state transformed: [$school]")
-    println(school.after(80).sum())
+    println(school.after(256).sum())
 }
 
 fun List<Int>.toSchool(): School {
