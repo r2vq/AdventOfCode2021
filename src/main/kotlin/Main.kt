@@ -1,62 +1,70 @@
 import java.util.*
 
 fun main() {
-    var maxX = 0
-    var maxY = 0
-    val coordinates = Scanner(System.`in`)
-        .getCoordinates()
-        .onEach { pipe ->
-            maxX = maxX.coerceAtLeast(pipe.startX).coerceAtLeast(pipe.endX)
-            maxY = maxY.coerceAtLeast(pipe.startY).coerceAtLeast(pipe.endY)
-        }
+    val scanner = Scanner(System.`in`)
+    val fishes = scanner.nextLine().split(",").map { it.toInt() }
+    println("Initial state: ${fishes.joinToString(",") { it.toString() }}")
+    val school = fishes.toSchool()
+    println("Initial state transformed: [$school]")
+    println(school.after(80).sum())
+}
 
-    val grid = makeGrid(maxX, maxY)
-
-    coordinates.forEach { coordinate ->
-        val xIncrement = getIncrement(coordinate.startX, coordinate.endX)
-        val yIncrement = getIncrement(coordinate.startY, coordinate.endY)
-        var currentX = coordinate.startX
-        var currentY = coordinate.startY
-
-        while (currentX != coordinate.endX || currentY != coordinate.endY) {
-            grid[currentY][currentX] += 1
-
-            currentX += xIncrement
-            currentY += yIncrement
-        }
-        grid[currentY][currentX] += 1
+fun List<Int>.toSchool(): School {
+    val school = arrayOfNulls<Long>(9).map { 0L }.toMutableList()
+    forEach { fish ->
+        school[fish] += 1L
     }
-
-    println(grid.flatten().filter { it >= 2 }.size)
+    return School(
+        zero = school[0],
+        one = school[1],
+        two = school[2],
+        three = school[3],
+        four = school[4],
+        five = school[5],
+        six = school[6],
+        seven = school[7],
+        eight = school[8],
+    )
 }
 
-fun Scanner.getCoordinates(): List<Pipe> = mutableListOf<Pipe>().apply {
-    while (hasNext()) add(nextLine().toPipe())
-    close()
+data class School(
+    val zero: Long,
+    val one: Long,
+    val two: Long,
+    val three: Long,
+    val four: Long,
+    val five: Long,
+    val six: Long,
+    val seven: Long,
+    val eight: Long,
+) {
+    override fun toString(): String = mutableListOf<String>()
+        .apply {
+            if (zero > 0) add("zero=$zero")
+            if (one > 0) add("one=$one")
+            if (two > 0) add("two=$two")
+            if (three > 0) add("three=$three")
+            if (four > 0) add("four=$four")
+            if (five > 0) add("five=$five")
+            if (six > 0) add("six=$six")
+            if (seven > 0) add("seven=$seven")
+            if (eight > 0) add("eight=$eight")
+        }
+        .joinToString(", ") { it }
 }
 
-fun String.toPipe(): Pipe {
-    val (start, end) = split(" -> ")
-    val (startX, startY) = start.split(",").map { it.toInt() }
-    val (endX, endY) = end.split(",").map { it.toInt() }
-    return Pipe(startX, startY, endX, endY)
-}
+fun School.sum(): Long = zero + one + two + three + four + five + six + seven + eight
 
-fun makeGrid(maxX: Int, maxY: Int): MutableList<MutableList<Int>> = mutableListOf<MutableList<Int>>().apply {
-    for (i in 0..maxY) mutableListOf<Int>()
-        .apply { for (j in 0..maxX) add(0) }
-        .let { add(it) }
-}
-
-fun getIncrement(start: Int, end: Int) = when {
-    start < end -> 1
-    start > end -> -1
-    else -> 0
-}
-
-data class Pipe(
-    val startX: Int,
-    val startY: Int,
-    val endX: Int,
-    val endY: Int,
+fun School.after(days: Int, currentDay: Int = 1): School = School(
+    zero = one,
+    one = two,
+    two = three,
+    three = four,
+    four = five,
+    five = six,
+    six = zero + seven,
+    seven = eight,
+    eight = zero
 )
+    .also { school -> println("After $currentDay ${if (currentDay == 1) "Day" else "Days"}: [$school]") }
+    .run { takeUnless { currentDay < days } ?: after(days, currentDay + 1) }
