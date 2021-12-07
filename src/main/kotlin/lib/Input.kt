@@ -15,6 +15,17 @@ class Input(private val scanner: Scanner = Scanner(System.`in`)) {
         .toList()
         .also { scanner.close() }
 
+    fun getNextInts(): List<Int> = generateSequence {
+        if (scanner.hasNextLine()) {
+            scanner.nextLine().split(",").map { it.toInt() }
+        } else {
+            null
+        }
+    }
+        .flatten()
+        .toList()
+        .also { scanner.close() }
+
     fun getLines(): List<String> = generateSequence {
         if (scanner.hasNext()) {
             scanner.nextLine()
