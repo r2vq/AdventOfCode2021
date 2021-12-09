@@ -1,81 +1,61 @@
 import lib.Input
 
 fun main() {
-    val lines = Input()
-        .getLines()
-        .map { line ->
-            line
-                .split("")
-                .filter { num -> num.isNotEmpty() }
-                .map { num -> num.toInt() }
-        }
-    val cells = lines
-        .asSequence()
-        .mapIndexed { rowIndex, row ->
-            row.mapIndexed { colIndex, col ->
-                val top = if (rowIndex > 0) col.isLowerThan(lines[rowIndex - 1][colIndex]) else true
-                val left = if (colIndex > 0) col.isLowerThan(row[colIndex - 1]) else true
-                val bottom = if (rowIndex + 1 < lines.size) col.isLowerThan(lines[rowIndex + 1][colIndex]) else true
-                val right = if (colIndex + 1 < row.size) col.isLowerThan(row[colIndex + 1]) else true
-                Cell(left && top && right && bottom, col, rowIndex, colIndex)
+    val heightsGrid = Input().getLines().map { row -> row.toCharArray().map { it.digitToInt() } }
+    val cellsGrid = heightsGrid
+        .mapIndexed { rowIndex, heightsRow ->
+            heightsRow.mapIndexed { colIndex, height ->
+                val isLowerThanLeft = height.isLowerThan(heightsGrid, rowIndex, colIndex - 1) ?: true
+                val isLowerThanTop = height.isLowerThan(heightsGrid, rowIndex - 1, colIndex) ?: true
+                val isLowerThanRight = height.isLowerThan(heightsGrid, rowIndex, colIndex + 1) ?: true
+                val isLowerThanBottom = height.isLowerThan(heightsGrid, rowIndex + 1, colIndex) ?: true
+                Cell(
+                    isLowPoint = isLowerThanLeft && isLowerThanTop && isLowerThanRight && isLowerThanBottom,
+                    height = height,
+                    rowIndex = rowIndex,
+                    colIndex = colIndex
+                )
             }
         }
-    val basins = cells.flatten()
+
+    val (first, second, third) = cellsGrid.flatten()
         .filter { it.isLowPoint }
-        .map { cell -> cell.findNeighbours(cells.toList()) }
-        .map { grid -> grid.map { it.height }.size }
-        .onEach { println(it) }
-        .toList()
-
-    var first = 0
-    var second = 0
-    var third = 0
-
-    basins.forEach { basin ->
-        if (basin > first) {
-            third = second
-            second = first
-            first = basin
-        } else if (basin > second) {
-            third = second
-            second = first
-        } else if (basin > third) {
-            third = basin
+        .map { cell -> cell.findNeighbours(cellsGrid).size }
+        .fold(0 to 0 to 0) { (first, second, third), basin ->
+            when {
+                basin > first -> basin to first to second
+                basin > second -> first to basin to second
+                basin > third -> first to second to basin
+                else -> first to second to third
+            }
         }
-    }
 
-    println("$first * $second * $third = ${first * second * third}")
+    println("$first * $second * $third =")
+    println("${first * second * third}")
 }
 
-fun Cell.findNeighbours(grid: List<List<Cell>>): Set<Cell> = listOfNotNull(
-    if (rowIndex > 0 && height < grid[rowIndex - 1][colIndex].height && grid[rowIndex - 1][colIndex].height < 9) {
-        grid[rowIndex - 1][colIndex].findNeighbours(grid)
-    } else {
-        null
-    },
-    if (colIndex > 0 && height < grid[rowIndex][colIndex - 1].height && grid[rowIndex][colIndex - 1].height < 9) {
-        grid[rowIndex][colIndex - 1].findNeighbours(grid)
-    } else {
-        null
-    },
-    if (rowIndex + 1 < grid.size && height < grid[rowIndex + 1][colIndex].height && grid[rowIndex + 1][colIndex].height < 9) {
-        grid[rowIndex + 1][colIndex].findNeighbours(grid)
-    } else {
-        null
-    },
-    if (colIndex + 1 < grid[rowIndex].size && height < grid[rowIndex][colIndex + 1].height && grid[rowIndex][colIndex + 1].height < 9) {
-        grid[rowIndex][colIndex + 1].findNeighbours(grid)
-    } else {
-        null
-    }
+infix fun <T, U, V> Pair<T, U>.to(third: V) = Triple(first, second, third)
+
+fun Int.isLowerThan(heightGrid: List<List<Int>>, rowIndex: Int, colIndex: Int): Boolean? = heightGrid
+    .getOrNull(rowIndex)
+    ?.getOrNull(colIndex)
+    ?.let { this < it }
+
+fun Cell.findNeighbours(cellGrid: List<List<Cell>>): Set<Cell> = listOfNotNull(
+    neighbouringBasin(cellGrid, rowIndex - 1, colIndex),
+    neighbouringBasin(cellGrid, rowIndex, colIndex - 1),
+    neighbouringBasin(cellGrid, rowIndex + 1, colIndex),
+    neighbouringBasin(cellGrid, rowIndex, colIndex + 1),
 )
     .flatten()
-    .plus(this)
     .toSet()
+    .plus(this)
 
-fun Int.isLowerThan(other: Int): Boolean {
-    return this < other
-}
+fun Cell.neighbouringBasin(cellGrid: List<List<Cell>>, rowIndex: Int, colIndex: Int): Set<Cell>? = cellGrid
+    .getOrNull(rowIndex)
+    ?.getOrNull(colIndex)
+    ?.takeIf { other -> other.height in height + 1 until 9 }
+    ?.findNeighbours(cellGrid)
 
 data class Cell(
     val isLowPoint: Boolean,
