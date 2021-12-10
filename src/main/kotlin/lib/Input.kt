@@ -15,9 +15,9 @@ class Input(private val scanner: Scanner = Scanner(System.`in`)) {
         .toList()
         .also { scanner.close() }
 
-    fun getNextInts(): List<Int> = generateSequence {
+    fun getNextInts(vararg delimiters: String = arrayOf(",")): List<Int> = generateSequence {
         if (scanner.hasNextLine()) {
-            scanner.nextLine().split(",").map { it.toInt() }
+            scanner.nextLine().split(*delimiters).map { it.toInt() }
         } else {
             null
         }
