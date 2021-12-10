@@ -2,10 +2,10 @@ import lib.Input
 import java.util.*
 
 val points = mapOf(
-    ")" to 3,
-    "]" to 57,
-    "}" to 1197,
-    ">" to 25137,
+    ")" to 1,
+    "]" to 2,
+    "}" to 3,
+    ">" to 4,
 )
 
 val brackets = mapOf(
@@ -16,27 +16,30 @@ val brackets = mapOf(
 )
 
 fun main() {
-    Input().getLines()
+    Input()
+        .getLines()
         .map { line -> line.split("").filter { char -> char.isNotEmpty() } }
-        .map { line -> line.checkIfCorrupted() }
-        .reduce { acc, i -> acc + i }
-        .let(::println)
+        .mapNotNull { line -> line.checkIncomplete() }
+        .map { scores -> scores.calculateScore() }
+        .sorted()
+        .let { it[it.size / 2] }
+        .let { println(it) }
 }
 
-fun List<String>.checkIfCorrupted(): Int {
+fun List<String>.checkIncomplete(): Stack<String>? {
     val expected: Stack<String> = Stack()
 
     forEach { char ->
         if (brackets.keys.contains(char)) {
             expected.push(brackets[char])
-        } else if (expected.peek() == char) {
-            expected.pop()
-        } else {
-            val wanted = expected.pop()
-            println("Expected $wanted but found $char instead.")
-            return points[char] ?: 0
+        } else if (expected.pop() != char) {
+            return null
         }
     }
 
-    return 0
+    return expected
+}
+
+fun Stack<String>.calculateScore(): Long = foldRight(0L) { char: String, score: Long ->
+    score.times(5) + (points[char] ?: 0)
 }
