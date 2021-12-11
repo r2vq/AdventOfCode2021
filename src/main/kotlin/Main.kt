@@ -1,45 +1,87 @@
 import lib.Input
-import java.util.*
 
-val points = mapOf(
-    ")" to 1,
-    "]" to 2,
-    "}" to 3,
-    ">" to 4,
-)
+typealias Grid = List<List<Octopus>>
 
-val brackets = mapOf(
-    "(" to ")",
-    "[" to "]",
-    "{" to "}",
-    "<" to ">",
-)
+var totalFlashes = 0L
 
 fun main() {
-    Input()
+    val numbers = Input()
         .getLines()
-        .map { line -> line.split("").filter { char -> char.isNotEmpty() } }
-        .mapNotNull { line -> line.checkIncomplete() }
-        .map { scores -> scores.calculateScore() }
-        .sorted()
-        .let { it[it.size / 2] }
-        .let { println(it) }
+        .map { line ->
+            line
+                .split("")
+                .mapNotNull { char -> char.takeIf { it.isNotEmpty() } }
+                .map { char -> char.toInt().let { Octopus(it) } }
+        }
+
+    numbers.draw()
+    numbers.takeSteps(100).draw()
+    println("Total Flashes: $totalFlashes")
 }
 
-fun List<String>.checkIncomplete(): Stack<String>? {
-    val expected: Stack<String> = Stack()
+fun Grid.takeSteps(count: Int): Grid = takeIf { count == 0 } ?: step().flash().clear().takeSteps(count - 1)
 
-    forEach { char ->
-        if (brackets.keys.contains(char)) {
-            expected.push(brackets[char])
-        } else if (expected.pop() != char) {
-            return null
+fun Grid.step(): Grid = map { row -> row.map { octopus -> octopus.copy(energy = octopus.energy + 1) } }
+
+fun Grid.flash(): Grid {
+    val flashed = mutableListOf<Pair<Int, Int>>()
+    val result: List<List<Octopus>> = mapIndexed { i, row ->
+        row.mapIndexed { j, octopus ->
+            if (octopus.energy > 9) {
+                totalFlashes += 1
+                flashed.add(i to j)
+                Octopus(0, true)
+            } else {
+                octopus
+            }
         }
     }
-
-    return expected
+    return if (flashed.isNotEmpty()) {
+        var map = result
+        flashed.forEach { (rowIndex, colIndex) ->
+            map = map.mapIndexed { i, row ->
+                row.mapIndexed { j, cell ->
+                    when {
+                        (i - 1 == rowIndex && j - 1 == colIndex) ||
+                                (i - 1 == rowIndex && j == colIndex) ||
+                                (i - 1 == rowIndex && j + 1 == colIndex) ||
+                                (i == rowIndex && j - 1 == colIndex) ||
+                                (i == rowIndex && j + 1 == colIndex) ||
+                                (i + 1 == rowIndex && j - 1 == colIndex) ||
+                                (i + 1 == rowIndex && j == colIndex) ||
+                                (i + 1 == rowIndex && j + 1 == colIndex) -> {
+                            cell.copy(energy = cell.energy + 1)
+                        }
+                        else -> cell
+                    }
+                }
+            }
+        }
+        map.flash().mapIndexed { i, row ->
+            row.mapIndexed { j, cell ->
+                if (flashed.contains(i to j)) {
+                    cell.copy(energy = 0)
+                } else {
+                    cell
+                }
+            }
+        }
+    } else {
+        result
+    }
 }
 
-fun Stack<String>.calculateScore(): Long = foldRight(0L) { char: String, score: Long ->
-    score.times(5) + (points[char] ?: 0)
+fun Grid.clear(): Grid = map { row -> row.map { octopus -> octopus.copy(didFlash = false) } }
+
+fun Grid.draw(): Grid {
+    println("=========================================")
+    map { row -> row.map { String.format("%2d", it.energy) } }
+        .forEach { row -> println(row) }
+    println("=========================================")
+    return this
 }
+
+data class Octopus(
+    val energy: Int,
+    val didFlash: Boolean = false,
+)
