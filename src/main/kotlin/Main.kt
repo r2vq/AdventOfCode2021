@@ -15,11 +15,20 @@ fun main() {
         }
 
     numbers.draw()
-    numbers.takeSteps(100).draw()
+    numbers.takeSteps().draw()
     println("Total Flashes: $totalFlashes")
 }
 
-fun Grid.takeSteps(count: Int): Grid = takeIf { count == 0 } ?: step().flash().clear().takeSteps(count - 1)
+fun Grid.takeSteps(count: Int = 0): Grid {
+    println("step: $count")
+    return takeIf {
+        var allZero = true
+        forEach { row -> row.forEach { octopus -> if (octopus.energy != 0) allZero = false } }
+        allZero
+    } ?: step().flash().clear().takeSteps(count + 1)
+}
+
+//fun Grid.takeSteps(count: Int): Grid = takeIf { count == 0 } ?: step().flash().clear().takeSteps(count - 1)
 
 fun Grid.step(): Grid = map { row -> row.map { octopus -> octopus.copy(energy = octopus.energy + 1) } }
 
