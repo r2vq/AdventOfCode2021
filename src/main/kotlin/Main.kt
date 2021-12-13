@@ -1,73 +1,81 @@
-import lib.Input
+import java.util.*
 
-private const val NODE_START = "start"
-private const val NODE_END = "end"
+typealias Coordinate = Pair<Int, Int>
+typealias Grid = List<MutableList<Boolean>>
 
 fun main() {
-    val nodes = Input().getLines().map { it.split("-") }.createNodes()
-    val startNode = nodes.getValue(NODE_START)
-    val paths = nodes.filter { node -> node.key != NODE_START && node.key != NODE_END && !node.value.isLarge }
-        .flatMap { exception -> mapOf(startNode.name to 1).traverse(nodes, startNode, exception.value, startNode.name) }
-        .toSet()
+    val scanner = Scanner(System.`in`)
+    val (coordinates, instructions) = scanner.makeInput()
 
-    println(paths.size)
+    val folded = instructions
+        .fold(coordinates.toList()) { currentCoordinates, instruction ->
+            instruction.fold(currentCoordinates)
+        }
+    val baseGrid = folded
+        .reduce { acc, curr ->
+            acc.first.coerceAtLeast(curr.first) to acc.second.coerceAtLeast(curr.second)
+        }
+        .let { (maxWidth, maxHeight) ->
+            arrayOfNulls<List<List<Boolean>>>(maxHeight + 1)
+                .map { arrayOfNulls<List<Boolean>>(maxWidth + 1).map { false }.toMutableList() }
+        }
+    folded
+        .fold(baseGrid) { grid: List<MutableList<Boolean>>, (x, y) ->
+            grid[y][x] = true
+            grid
+        }
+        .draw()
 }
 
-fun List<List<String>>.createNodes(): Map<String, Node> = fold(mapOf()) { nodes, (firstName, secondName) ->
-    nodes
-        .lazyPlusIfNotExists(firstName) {
-            Node(
-                name = firstName,
-                connections = emptySet(),
-                isLarge = firstName.isAllUpperCase()
-            )
-        }
-        .lazyPlusIfNotExists(secondName) {
-            Node(
-                name = secondName,
-                connections = emptySet(),
-                isLarge = secondName.isAllUpperCase()
-            )
-        }
-        .update(firstName) { copy(connections = connections.plus(secondName)) }
-        .update(secondName) { copy(connections = connections.plus(firstName)) }
-}
-
-fun Map<String, Int>.traverse(nodes: Map<String, Node>, node: Node, exception: Node, path: String): List<String?> =
-    if (node.name == NODE_END) {
-        listOf(path)
-    } else {
-        node.connections.mapNotNull { connectionName ->
-            val connection = nodes.getValue(connectionName)
-            when {
-                connection.isLarge || !contains(connectionName) -> plus(connectionName to 0)
-                    .traverse(
-                        nodes = nodes,
-                        node = connection,
-                        exception = exception,
-                        path = "$path,$connectionName"
-                    )
-                connectionName == exception.name && get(exception.name) == 0 -> plus(connectionName to 1)
-                    .traverse(
-                        nodes = nodes,
-                        node = connection,
-                        exception = exception,
-                        path = "$path,$connectionName"
-                    )
-                else -> null
+fun Scanner.makeInput(): Pair<MutableList<Coordinate>, MutableList<Fold>> {
+    val coordinates = mutableListOf<Coordinate>()
+    val instructions = mutableListOf<Fold>()
+    var isFull = false
+    while (hasNextLine()) {
+        val line = nextLine()
+        when {
+            isFull -> {
+                if (line.contains("y")) {
+                    instructions.add(VerticalFold(line.split("=")[1].toInt()))
+                } else if (line.contains("x")) {
+                    instructions.add(HorizontalFold(line.split("=")[1].toInt()))
+                }
             }
-        }.flatten()
+            line.isEmpty() -> {
+                isFull = true
+            }
+            else -> {
+                coordinates.add(line.split(",").let { (x, y) -> x.toInt() to y.toInt() })
+            }
+        }
     }
+    return coordinates to instructions
+}
 
-fun <T, U> Map<T, U>.lazyPlusIfNotExists(key: T, initializer: () -> U): Map<T, U> = takeUnless { !it.contains(key) }
-    ?: plus(key to initializer())
+fun Grid.draw() = forEach { row ->
+    row
+        .map { isActive -> if (isActive) "█" else " " }
+        .joinToString("") { char -> char }
+        .let { line -> println(line) }
+}
 
-fun <T, U> Map<T, U>.update(key: T, transformer: U.() -> U): Map<T, U> = plus(key to getValue(key).transformer())
+interface Fold {
+    val position: Int
+    fun fold(coordinates: List<Coordinate>): List<Coordinate>
+}
 
-fun String.isAllUpperCase(): Boolean = this == uppercase()
+class HorizontalFold(override val position: Int) : Fold {
+    override fun fold(coordinates: List<Coordinate>): List<Coordinate> = coordinates.map { coordinate ->
+        coordinate.run {
+            takeIf { first <= position } ?: copy(first = position - (first - position))
+        }
+    }
+}
 
-data class Node(
-    val name: String,
-    val connections: Set<String>,
-    val isLarge: Boolean,
-)
+class VerticalFold(override val position: Int) : Fold {
+    override fun fold(coordinates: List<Coordinate>): List<Coordinate> = coordinates.map { coordinate ->
+        coordinate.run {
+            takeIf { second <= position } ?: copy(second = position - (second - position))
+        }
+    }
+}
